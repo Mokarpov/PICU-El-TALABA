@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PICU Easy Handover & Progression</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --muted: #475569;
+      --primary: #0284c7;
+      --primary-light: #e0f2fe;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --amber: #d97706;
+      --amber-bg: #fef3c7;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.45;
+      padding-bottom: 40px;
+    }
+
+    /* Top Bar */
+    .topbar {
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .brand-badge {
+      background: var(--primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      background: #1e293b;
+      padding: 5px 8px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+
+    .sync-bar input {
+      background: #0f172a;
+      color: #fff;
+      border: 1px solid #475569;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 140px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #94a3b8;
+      display: inline-block;
+    }
+    .status-dot.live { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .status-dot.syncing { background: #f59e0b; }
+
+    .btn {
+      border: none;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-dark { background: #334155; color: #fff; }
+    .btn-red { background: var(--red-bg); color: var(--red); }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 14px auto;
+      padding: 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Horizontal Bed Switcher Strip */
+    .bed-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      align-items: center;
+    }
+
+    .bed-tab {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-left-width: 6px;
+      border-radius: 8px;
+      padding: 8px 14px;
+      min-width: 155px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .bed-tab.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .bed-tab.Stable { border-left-color: var(--green); }
+    .bed-tab.Watcher { border-left-color: var(--amber); }
+    .bed-tab.Critical { border-left-color: var(--red); }
+
+    .bed-tab-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+    }
+    .bed-tab-name {
+      font-weight: 800;
+      font-size: 14px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      unicode-bidi: plaintext;
+    }
+
+    /* Cards & Grids */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: var(--primary-light);
+      color: #0369a1;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+
+    @media (max-width: 850px) {
+      .grid-2, .grid-3, .grid-4, .grid-6 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 520px) {
+      .grid-2, .grid-3, .grid-4, .grid-6 { grid-template-columns: 1fr; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .field input, .field select, .field textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      width: 100%;
+      unicode-bidi: plaintext;
+    }
+    .field textarea { min-height: 62px; resize: vertical; }
+
+    /* KPI Strip */
+    .kpi-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .kpi-pill {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .kpi-pill strong { color: var(--primary); font-size: 14px; }
+
+    /* To-Do List */
+    .todo-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .todo-row input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      unicode-bidi: plaintext;
+    }
+    .todo-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      unicode-bidi: plaintext;
+    }
+    .todo-item.done span { text-decoration: line-through; color: var(--muted); }
+
+    /* Progression Table */
+    .prog-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .prog-table th, .prog-table td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      unicode-bidi: plaintext;
+    }
+    .prog-table th { background: #f8fafc; }
+
+    @media print {
+      .topbar, .bed-strip, .no-print { display: none !important; }
+      body { background: #fff; padding: 0; }
+      .container { max-width: 100%; margin: 0; }
+      .card { break-inside: avoid; box-shadow: none; border: 1px solid #64748b; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar with Built-In 1-Click Room Sync -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">PICU</span>
+      <span>Handover & Progression</span>
+    </div>
+
+    <div class="sync-bar">
+      <span class="status-dot" id="syncDot"></span>
+      <span id="syncText" style="font-size:12px; font-weight:700;">Local Mode</span>
+      <input type="text" id="roomCodeInput" placeholder="Unit Code (e.g. picu1)" />
+      <button class="btn btn-primary" id="btnConnectRoom">Connect Live</button>
+      <button class="btn btn-green" id="btnShareLink" title="Copy link for WhatsApp group">Share Link</button>
+    </div>
+
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      <button class="btn btn-dark" id="btnCopyWhatsapp">Copy WhatsApp Text</button>
+      <button class="btn btn-dark" onclick="window.print()">Print / Save PDF</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Bed Selector Bar -->
+    <div class="bed-strip" id="bedStrip"></div>
+
+    <!-- Patient Overview Card -->
+    <section class="card">
+      <div class="card-header">
+        <div class="kpi-bar" style="margin-bottom:0;">
+          <div class="kpi-pill">Stay: <strong id="kpiDay">Day 1</strong></div>
+          <div class="kpi-pill">P/F Ratio: <strong id="kpiPF">--</strong></div>
+          <div class="kpi-pill">VIS Score: <strong id="kpiVIS">0</strong></div>
+          <div class="kpi-pill">UOP: <strong id="kpiUOP">-- mL/kg/hr</strong></div>
+          <div class="kpi-pill">Net Balance: <strong id="kpiNet">0 mL</strong></div>
+        </div>
+        <div class="no-print" style="display:flex; gap:8px;">
+          <button class="btn btn-green" id="btnSaveDay">+ Save Today's Progression</button>
+          <button class="btn btn-red" id="btnDeleteBed">Delete Bed</button>
+        </div>
+      </div>
+
+      <div class="grid-6">
+        <div class="field">
+          <label>Bed #</label>
+          <input type="text" data-field="bed" placeholder="Bed 1" />
+        </div>
+        <div class="field" style="grid-column: span 2;">
+          <label>Patient Name (Arabic / English)</label>
+          <input type="text" data-field="name" placeholder="Full Name..." />
+        </div>
+        <div class="field">
+          <label>Age</label>
+          <input type="text" data-field="age" placeholder="e.g. 2 yrs" />
+        </div>
+        <div class="field">
+          <label>Weight (kg)</label>
+          <input type="number" step="0.1" data-field="weight" placeholder="kg" />
+        </div>
+        <div class="field">
+          <label>Status / Acuity</label>
+          <select data-field="acuity">
+            <option value="Stable">Stable (Green)</option>
+            <option value="Watcher">Watcher (Amber)</option>
+            <option value="Critical">Critical (Red)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:10px;">
+        <div class="field">
+          <label>Admission Date</label>
+          <input type="date" data-field="admDate" />
+        </div>
+        <div class="field">
+          <label>Diagnosis & Active Problems</label>
+          <input type="text" data-field="dx" placeholder="e.g. Severe Pneumonia, Septic Shock..." />
+        </div>
+        <div class="field">
+          <label>Airway & Lines (ETT / CVC / Art Line)</label>
+          <input type="text" data-field="lines" placeholder="e.g. ETT 4.5 @ 13cm, Right IJV CVC D3" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Core Clinical Systems (2x2 Grid) -->
+    <div class="grid-2">
+      <!-- 1. Respiratory -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">1. Respiratory & Ventilator</span>
+          <span class="badge" id="badgeResp">P/F: --</span>
+        </div>
+        <div class="grid-4">
+          <div class="field">
+            <label>Mode</label>
+            <select data-field="ventMode">
+              <option value="Room Air">Room Air</option>
+              <option value="Nasal / Mask O2">Nasal / Mask O2</option>
+              <option value="HFNC">HFNC</option>
+              <option value="CPAP / NIV">CPAP / NIV</option>
+              <option value="SIMV-PC">SIMV-PC</option>
+              <option value="AC / PC">AC / PC</option>
+              <option value="PRVC">PRVC</option>
+              <option value="PSV">PSV</option>
+              <option value="HFOV">HFOV</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>PIP / PEEP</label>
+            <input type="text" data-field="pipPeep" placeholder="22 / 7" />
+          </div>
+          <div class="field">
+            <label>FiO₂ (%)</label>
+            <input type="number" data-field="fio2" placeholder="40" />
+          </div>
+          <div class="field">
+            <label>PaO₂ (mmHg)</label>
+            <input type="number" data-field="pao2" placeholder="85" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div class="field">
+            <label>Blood Gas (pH / pCO₂ / HCO₃ / SpO₂)</label>
+            <input type="text" data-field="abg" placeholder="7.36 / 44 / 24 | SpO2 96%" />
+          </div>
+          <div class="field">
+            <label>Chest Exam & Resp Plan</label>
+            <input type="text" data-field="respPlan" placeholder="Equal air entry, wean FiO2 to 35%..." />
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Cardiovascular -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">2. Cardiovascular & Inotropes</span>
+          <span class="badge" id="badgeCVS">VIS: 0</span>
+        </div>
+        <div class="grid-4">
+          <div class="field">
+            <label>HR & BP (MAP)</label>
+            <input type="text" data-field="hrBp" placeholder="130 | 90/50 (63)" />
+          </div>
+          <div class="field">
+            <label>Epi (mcg/kg/m)</label>
+            <input type="number" step="0.01" data-field="epi" placeholder="0" />
+          </div>
+          <div class="field">
+            <label>Norepi (mcg/kg/m)</label>
+            <input type="number" step="0.01" data-field="norepi" placeholder="0" />
+          </div>
+          <div class="field">
+            <label>Milrinone / Dopa</label>
+            <input type="number" step="0.1" data-field="milrinone" placeholder="0" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div class="field">
+            <label>Lactate / CRT / Echo</label>
+            <input type="text" data-field="lacEcho" placeholder="Lac 1.4 | CRT <2s | EF 60%" />
+          </div>
+          <div class="field">
+            <label>Hemodynamic Plan</label>
+            <input type="text" data-field="cvsPlan" placeholder="Keep MAP > 55, wean Norepi..." />
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Renal, Fluids & Nutrition -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">3. Fluids, Renal, Lytes & Feeding</span>
+          <span class="badge" id="badgeRenal">UOP: -- mL/kg/hr</span>
+        </div>
+        <div class="grid-4">
+          <div class="field">
+            <label>Period (Hours)</label>
+            <input type="number" data-field="flHrs" placeholder="24" />
+          </div>
+          <div class="field">
+            <label>Total In (mL)</label>
+            <input type="number" data-field="flIn" placeholder="1000" />
+          </div>
+          <div class="field">
+            <label>Urine Out (mL)</label>
+            <input type="number" data-field="uop" placeholder="850" />
+          </div>
+          <div class="field">
+            <label>Urea / Cr</label>
+            <input type="text" data-field="ureaCr" placeholder="28 / 0.4" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div class="field">
+            <label>Electrolytes (Na / K / Ca / Mg) & Diuretics</label>
+            <input type="text" data-field="lytes" placeholder="Na 138, K 4.1, iCa 1.15 | Lasix BD" />
+          </div>
+          <div class="field">
+            <label>Feeding & GI</label>
+            <input type="text" data-field="feeds" placeholder="NGT 35 mL / 3h, tolerated" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Neuro, ID & Hematology -->
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">4. Neuro, Sepsis / Antibiotics & Labs</span>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>GCS / Pupils / Sedation / Seizures</label>
+            <input type="text" data-field="neuro" placeholder="GCS 10T, Fentanyl + Midazolam" />
+          </div>
+          <div class="field">
+            <label>Temp / WBC / CRP / Hb / PLT</label>
+            <input type="text" data-field="labs" placeholder="37.8°C | WBC 13k | CRP 38 | Hb 10.2 | PLT 190k" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px;">
+          <div class="field">
+            <label>Antibiotics (with Day #)</label>
+            <input type="text" data-field="abx" placeholder="Meropenem (D4), Vancomycin (D3)" />
+          </div>
+          <div class="field">
+            <label>Cultures & Notes</label>
+            <input type="text" data-field="cultures" placeholder="Blood Cx: Pending | ETA: Klebsiella" />
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Handover & Shift Action Checklist -->
+    <div class="grid-2">
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Shift Handover Summary & Contingency ("If / Then")</span>
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Shift Events & Overall Assessment</label>
+          <textarea data-field="summary" placeholder="Major events on shift, extubation/intubation, line changes..."></textarea>
+        </div>
+        <div class="field">
+          <label>Contingency Plan (What to watch out for tonight)</label>
+          <textarea data-field="contingency" placeholder="If SpO2 < 90% -> suction ETT & increase FiO2. If fever spikes -> send pan-cultures..."></textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <span class="card-title">Shift To-Do Checklist</span>
+        </div>
+        <div class="todo-row no-print">
+          <input type="text" id="todoInput" placeholder="Add task (e.g. Trace 4 PM ABG, Check Vanc trough)..." />
+          <button class="btn btn-primary" id="btnAddTodo">+ Add</button>
+        </div>
+        <div id="todoList"></div>
+      </section>
+    </div>
+
+    <!-- Day-by-Day Progression Table -->
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">Day-by-Day Clinical Progression Log</span>
+        <span style="font-size:12px; color:var(--muted);">Click "+ Save Today's Progression" above to record daily trajectory</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="prog-table">
+          <thead>
+            <tr>
+              <th>Date / Day</th>
+              <th>Resp / Vent</th>
+              <th>CVS / VIS</th>
+              <th>Fluids / UOP</th>
+              <th>Labs & ABx</th>
+              <th>Daily Summary</th>
+              <th class="no-print"></th>
+            </tr>
+          </thead>
+          <tbody id="progBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const STORAGE_KEY = 'picu_easy_v3';
+      const ROOM_KEY = 'picu_easy_room_v3';
+
+      let roomCode = localStorage.getItem(ROOM_KEY) || '';
+      let eventSource = null;
+      let pushTimer = null;
+
+      // Check if URL has ?room=code
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('room')) {
+        roomCode = urlParams.get('room').trim();
+        localStorage.setItem(ROOM_KEY, roomCode);
+      }
+
+      const defaultPatient = (num) => ({
+        id: 'pt_' + Date.now() + '_' + num,
+        bed: 'Bed ' + num,
+        name: num === 1 ? 'أحمد محمد (Ahmed Mohamed)' : 'New Patient',
+        age: num === 1 ? '3 yrs' : '',
+        weight: num === 1 ? '14' : '',
+        acuity: num === 1 ? 'Watcher' : 'Stable',
+        admDate: new Date().toISOString().split('T')[0],
+        dx: num === 1 ? 'Severe Pneumonia, Moderate PARDS' : '',
+        lines: num === 1 ? 'ETT 4.5 @ 13.5cm, Right IJV CVC D3' : '',
+        ventMode: num === 1 ? 'SIMV-PC' : 'Room Air',
+        pipPeep: num === 1 ? '22 / 7' : '',
+        fio2: num === 1 ? '45' : '',
+        pao2: num === 1 ? '82' : '',
+        abg: num === 1 ? '7.36 / 43 / 24 | SpO2 95%' : '',
+        respPlan: num === 1 ? 'Weaning FiO2 toward 40%' : '',
+        hrBp: num === 1 ? '124 | 92/54 (66)' : '',
+        epi: '0',
+        norepi: num === 1 ? '0.05' : '0',
+        milrinone: '0',
+        lacEcho: num === 1 ? 'Lac 1.3 | CRT <2s' : '',
+        cvsPlan: num === 1 ? 'Gradual Norepi wean' : '',
+        flHrs: '24',
+        flIn: num === 1 ? '1100' : '',
+        uop: num === 1 ? '920' : '',
+        ureaCr: num === 1 ? '26 / 0.4' : '',
+        lytes: num === 1 ? 'Na 139, K 4.2 | Lasix BD' : '',
+        feeds: num === 1 ? 'NGT 30 mL / 3h' : '',
+        neuro: num === 1 ? 'GCS 10T, Fentanyl infusion' : '',
+        labs: num === 1 ? '37.6°C | WBC 12.4 | CRP 40 | Hb 10.2' : '',
+        abx: num === 1 ? 'Meropenem (D3), Vancomycin (D3)' : '',
+        cultures: num === 1 ? 'Blood Cx: Pending' : '',
+        summary: num === 1 ? 'Stabilizing on low-dose Norepi, weaning FiO2.' : '',
+        contingency: num === 1 ? 'If SpO2 < 90%, suction ETT and check tube depth.' : '',
+        todos: num === 1 ? [{ id: 't1', text: 'Trace 4 PM ABG', done: false }] : [],
+        logs: []
+      });
+
+      let state = loadLocal();
+
+      function loadLocal() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.patients) && parsed.patients.length) return parsed;
+          }
+        } catch (e) {}
+        const p1 = defaultPatient(1);
+        return { updatedAt: Date.now(), activeId: p1.id, patients: [p1] };
+      }
+
+      function saveLocal(fromCloud = false) {
+        if (!fromCloud) state.updatedAt = Date.now();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (!fromCloud && roomCode) {
+          clearTimeout(pushTimer);
+          pushTimer = setTimeout(pushToCloud, 700);
+        }
+      }
+
+      function getActive() {
+        return state.patients.find(p => p.id === state.activeId) || state.patients[0];
+      }
+
+      // Built-in Zero-Setup Cloud Sync (via ntfy.sh public JSON relay)
+      function getTopic() {
+        return 'picu_live_sync_' + roomCode.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      }
+
+      function setSyncStatus(mode, label) {
+        const dot = document.getElementById('syncDot');
+        const txt = document.getElementById('syncText');
+        dot.className = 'status-dot ' + mode;
+        txt.textContent = label;
+      }
+
+      async function pushToCloud() {
+        if (!roomCode) return;
+        setSyncStatus('syncing', 'Syncing...');
+        try {
+          const payload = JSON.stringify({ updatedAt: state.updatedAt, patients: state.patients });
+          await fetch('https://ntfy.sh/' + getTopic(), {
+            method: 'POST',
+            body: payload
+          });
+          setSyncStatus('live', 'Live: ' + roomCode);
+        } catch (e) {
+          setSyncStatus('', 'Offline (Saved Locally)');
+        }
+      }
+
+      async function connectCloudRoom() {
+        if (eventSource) eventSource.close();
+        if (!roomCode) {
+          setSyncStatus('', 'Local Mode');
+          return;
+        }
+        setSyncStatus('syncing', 'Connecting...');
+        const topic = getTopic();
+
+        // 1. Fetch latest cached state in room
+        try {
+          const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=latest`);
+          const text = await res.text();
+          const lines = text.trim().split('\n').filter(Boolean);
+          for (const line of lines) {
+            const msg = JSON.parse(line);
+            if (msg.event === 'message' && msg.message) {
+              const remote = JSON.parse(msg.message);
+              if (remote && Array.isArray(remote.patients)) {
+                state.patients = remote.patients;
+                state.updatedAt = remote.updatedAt || Date.now();
+                if (!state.patients.some(p => p.id === state.activeId)) {
+                  state.activeId = state.patients[0].id;
+                }
+                saveLocal(true);
+                renderAll();
+              }
+            }
+          }
+          setSyncStatus('live', 'Live: ' + roomCode);
+        } catch (e) {}
+
+        // 2. Listen for real-time updates from other doctors
+        try {
+          eventSource = new EventSource(`https://ntfy.sh/${topic}/sse`);
+          eventSource.onmessage = (evt) => {
+            try {
+              const data = JSON.parse(evt.data);
+              if (data.event === 'message' && data.message) {
+                const remote = JSON.parse(data.message);
+                if (remote && Array.isArray(remote.patients) && remote.updatedAt > state.updatedAt) {
+                  state.patients = remote.patients;
+                  state.updatedAt = remote.updatedAt;
+                  if (!state.patients.some(p => p.id === state.activeId)) {
+                    state.activeId = state.patients[0].id;
+                  }
+                  saveLocal(true);
+                  renderAll();
+                }
+              }
+            } catch (err) {}
+          };
+        } catch (e) {}
+      }
+
+      // Clinical Calculations
+      function calc(pt) {
+        let day = 'Day 1';
+        if (pt.admDate) {
+          const diff = Math.floor((Date.now() - new Date(pt.admDate).getTime()) / 86400000) + 1;
+          day = diff >= 1 ? 'Day ' + diff : 'Day 1';
+        }
+        const fio2 = parseFloat(pt.fio2) || 0;
+        const pao2 = parseFloat(pt.pao2) || 0;
+        const pf = (fio2 > 0 && pao2 > 0) ? Math.round(pao2 / (fio2 / 100)) : '--';
+
+        const epi = parseFloat(pt.epi) || 0;
+        const norepi = parseFloat(pt.norepi) || 0;
+        const mil = parseFloat(pt.milrinone) || 0;
+        const vis = Math.round(((100 * epi) + (100 * norepi) + (10 * mil)) * 10) / 10;
+
+        const wt = parseFloat(pt.weight) || 0;
+        const hrs = parseFloat(pt.flHrs) || 24;
+        const flIn = parseFloat(pt.flIn) || 0;
+        const uop = parseFloat(pt.uop) || 0;
+        const net = flIn - uop;
+        const netStr = (net >= 0 ? '+' : '') + net + ' mL';
+        const uopRate = (wt > 0 && hrs > 0 && pt.uop !== '') ? (uop / wt / hrs).toFixed(2) : '--';
+
+        return { day, pf, vis, netStr, uopRate };
+      }
+
+      function renderBeds() {
+        const strip = document.getElementById('bedStrip');
+        strip.innerHTML = '';
+        state.patients.forEach(pt => {
+          const c = calc(pt);
+          const tab = document.createElement('div');
+          tab.className = `bed-tab ${pt.acuity || 'Stable'} ${pt.id === state.activeId ? 'active' : ''}`;
+          tab.innerHTML = `
+            <div class="bed-tab-top">
+              <span>${esc(pt.bed || 'Bed')}</span>
+              <span>${c.day}</span>
+            </div>
+            <div class="bed-tab-name">${esc(pt.name || 'Unnamed')}</div>
+          `;
+          tab.onclick = () => {
+            state.activeId = pt.id;
+            saveLocal(true);
+            renderAll();
+          };
+          strip.appendChild(tab);
+        });
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-primary no-print';
+        addBtn.style.padding = '12px 16px';
+        addBtn.textContent = '+ Add Bed';
+        addBtn.onclick = () => {
+          const next = defaultPatient(state.patients.length + 1);
+          state.patients.push(next);
+          state.activeId = next.id;
+          saveLocal();
+          renderAll();
+        };
+        strip.appendChild(addBtn);
+      }
+
+      function renderPatient() {
+        const pt = getActive();
+        if (!pt) return;
+
+        document.querySelectorAll('[data-field]').forEach(el => {
+          const k = el.getAttribute('data-field');
+          if (document.activeElement !== el) {
+            el.value = pt[k] !== undefined ? pt[k] : '';
+          }
+        });
+
+        updateKPIs();
+        renderTodos();
+        renderLogs();
+      }
+
+      function updateKPIs() {
+        const pt = getActive();
+        const c = calc(pt);
+        document.getElementById('kpiDay').textContent = c.day;
+        document.getElementById('kpiPF').textContent = c.pf;
+        document.getElementById('kpiVIS').textContent = c.vis;
+        document.getElementById('kpiUOP').textContent = c.uopRate + ' mL/kg/hr';
+        document.getElementById('kpiNet').textContent = c.netStr;
+
+        document.getElementById('badgeResp').textContent = 'P/F: ' + c.pf;
+        document.getElementById('badgeCVS').textContent = 'VIS: ' + c.vis;
+        document.getElementById('badgeRenal').textContent = `UOP: ${c.uopRate} mL/kg/hr | Net: ${c.netStr}`;
+      }
+
+      function renderTodos() {
+        const pt = getActive();
+        const list = document.getElementById('todoList');
+        list.innerHTML = '';
+        pt.todos = pt.todos || [];
+        pt.todos.forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'todo-item ' + (t.done ? 'done' : '');
+          div.innerHTML = `
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; flex:1;">
+              <input type="checkbox" ${t.done ? 'checked' : ''} />
+              <span>${esc(t.text)}</span>
+            </label>
+            <button class="btn btn-red no-print" style="padding:2px 8px; font-size:11px;">✕</button>
+          `;
+          div.querySelector('input').onchange = (e) => {
+            t.done = e.target.checked;
+            saveLocal();
+            renderTodos();
+          };
+          div.querySelector('button').onclick = () => {
+            pt.todos = pt.todos.filter(x => x.id !== t.id);
+            saveLocal();
+            renderTodos();
+          };
+          list.appendChild(div);
+        });
+      }
+
+      function renderLogs() {
+        const pt = getActive();
+        const tbody = document.getElementById('progBody');
+        tbody.innerHTML = '';
+        pt.logs = pt.logs || [];
+        if (pt.logs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted);">No progression days saved yet.</td></tr>`;
+          return;
+        }
+        pt.logs.forEach(l => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${esc(l.day)}</strong><br/><small>${esc(l.date)}</small></td>
+            <td>${esc(l.resp)}</td>
+            <td>${esc(l.cvs)}</td>
+            <td>${esc(l.renal)}</td>
+            <td>${esc(l.labs)}</td>
+            <td>${esc(l.summary)}</td>
+            <td class="no-print"><button class="btn btn-red" style="padding:2px 7px; font-size:11px;">✕</button></td>
+          `;
+          tr.querySelector('button').onclick = () => {
+            pt.logs = pt.logs.filter(x => x.id !== l.id);
+            saveLocal();
+            renderLogs();
+          };
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Event Listeners
+      document.querySelectorAll('[data-field]').forEach(el => {
+        el.addEventListener('input', () => {
+          const pt = getActive();
+          pt[el.getAttribute('data-field')] = el.value;
+          saveLocal();
+          updateKPIs();
+          renderBeds();
+        });
+      });
+
+      document.getElementById('btnAddTodo').onclick = () => {
+        const inp = document.getElementById('todoInput');
+        if (!inp.value.trim()) return;
+        const pt = getActive();
+        pt.todos = pt.todos || [];
+        pt.todos.push({ id: 't_' + Date.now(), text: inp.value.trim(), done: false });
+        inp.value = '';
+        saveLocal();
+        renderTodos();
+      };
+
+      document.getElementById('btnSaveDay').onclick = () => {
+        const pt = getActive();
+        const c = calc(pt);
+        pt.logs = pt.logs || [];
+        pt.logs.unshift({
+          id: 'l_' + Date.now(),
+          date: new Date().toISOString().split('T')[0],
+          day: c.day,
+          resp: `${pt.ventMode} | ${pt.pipPeep || '-'} | FiO2 ${pt.fio2 || '-'}% (P/F ${c.pf})`,
+          cvs: `${pt.hrBp || '-'} | VIS ${c.vis}`,
+          renal: `UOP ${c.uopRate} mL/kg/hr (${c.netStr})`,
+          labs: `${pt.labs || '-'} | ${pt.abx || '-'}`,
+          summary: pt.summary || pt.respPlan || 'Daily snapshot recorded'
+        });
+        saveLocal();
+        renderLogs();
+      };
+
+      document.getElementById('btnDeleteBed').onclick = () => {
+        if (state.patients.length <= 1) return alert('At least one bed must remain.');
+        const pt = getActive();
+        if (confirm(`Delete ${pt.bed} (${pt.name})?`)) {
+          state.patients = state.patients.filter(p => p.id !== pt.id);
+          state.activeId = state.patients[0].id;
+          saveLocal();
+          renderAll();
+        }
+      };
+
+      // Room Sync Buttons
+      const roomInput = document.getElementById('roomCodeInput');
+      roomInput.value = roomCode;
+
+      document.getElementById('btnConnectRoom').onclick = () => {
+        roomCode = roomInput.value.trim();
+        localStorage.setItem(ROOM_KEY, roomCode);
+        connectCloudRoom();
+        if (roomCode) pushToCloud();
+      };
+
+      document.getElementById('btnShareLink').onclick = () => {
+        const code = roomInput.value.trim() || 'picu-' + Math.floor(1000 + Math.random() * 9000);
+        roomInput.value = code;
+        roomCode = code;
+        localStorage.setItem(ROOM_KEY, code);
+        connectCloudRoom();
+        pushToCloud();
+        const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(code)}`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          alert(`Share Link copied!\n\nPaste this link in your PICU WhatsApp group. Anyone who opens it will join room "${code}" automatically.`);
+        });
+      };
+
+      document.getElementById('btnCopyWhatsapp').onclick = () => {
+        const lines = [`*PICU SHIFT HANDOVER (${new Date().toISOString().split('T')[0]})*`, `----------------------------`];
+        state.patients.forEach(pt => {
+          const c = calc(pt);
+          const tasks = (pt.todos || []).filter(t => !t.done).map(t => `  • ${t.text}`).join('\n');
+          lines.push(`*[${pt.bed}] ${pt.name}* (${pt.age}, ${pt.weight}kg) - *${pt.acuity}* (${c.day})`);
+          lines.push(`Dx: ${pt.dx || '-'} | Lines: ${pt.lines || '-'}`);
+          lines.push(`Resp: ${pt.ventMode} (${pt.pipPeep || '-'}, FiO2 ${pt.fio2 || '-'}%, P/F ${c.pf}) | ABG: ${pt.abg || '-'}`);
+          lines.push(`CVS: ${pt.hrBp || '-'} | VIS: ${c.vis} | ${pt.lacEcho || '-'}`);
+          lines.push(`Renal: UOP ${c.uopRate} mL/kg/hr (Net ${c.netStr}) | Lytes: ${pt.lytes || '-'}`);
+          lines.push(`ID/Neuro: ${pt.neuro || '-'} | ABx: ${pt.abx || '-'}`);
+          lines.push(`Summary: ${pt.summary || '-'}`);
+          if (pt.contingency) lines.push(`If/Then: ${pt.contingency}`);
+          if (tasks) lines.push(`Pending Tasks:\n${tasks}`);
+          lines.push(`----------------------------`);
+        });
+        navigator.clipboard.writeText(lines.join('\n')).then(() => {
+          alert('WhatsApp Shift Summary copied to clipboard!');
+        });
+      };
+
+      function esc(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function renderAll() {
+        renderBeds();
+        renderPatient();
+      }
+
+      renderAll();
+      if (roomCode) connectCloudRoom();
+    });
+  </script>
+</body>
+</html>
